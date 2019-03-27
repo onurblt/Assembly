@@ -8,6 +8,7 @@
 Word::Word()
 {
     data=0;
+	carry = false;
 }
 
 //___________________________________________
@@ -15,6 +16,7 @@ Word::Word()
 Word::Word(const int &_data)
 {
    data=_data;
+   carry = false;
 }
 
 //___________________________________________
@@ -22,7 +24,7 @@ Word::Word(const int &_data)
 Word::Word(const std::bitset<WORD_SIZE> &_data)
 {
    data=_data;
-
+   carry = false;
 }
 
 //___________________________________________
@@ -30,12 +32,13 @@ Word::Word(const std::bitset<WORD_SIZE> &_data)
 Word::Word(const Word &other)
 {
     data=other.data;
-
+	carry = other.carry;
 
 }
 Word& Word::operator = (const Word &other)
 {
     data=other.data;
+	carry = other.carry;
     return *this;
 }
 
@@ -57,11 +60,11 @@ Word Word::operator+(const Word& other)
 
     for (int i = 0; i < WORD_COUNT; i++)
     {
-        bool sum = (temp.data[i] ^ other.data[i]) ^ temp.carry;
-        temp.carry = (temp.data[i] && other.data[i]) || (temp.data[i] && temp.carry) || (other.data[i] && temp.carry);
+        bool sum = (data[i] ^ other.data[i]) ^ temp.carry;
+        temp.carry = (data[i] && other.data[i]) || (data[i] && temp.carry) || (other.data[i] && temp.carry);
         temp.data[i] = sum;
     }
-
+	printf("c=%d\n", temp.carry);
     //std::cout <<"add="<<data.to_ulong()<<std::endl;
 
     return temp;
@@ -95,6 +98,19 @@ Word Word::operator&=(const Word& other)
 
 //___________________________________________
 
+Word Word::operator~()
+{
+	Word temp(this->data);
+	for (int i = 0; i < WORD_SIZE; i++)
+	{
+		temp.data.flip(i);
+	}
+
+	return temp;
+}
+
+//___________________________________________
+
 const int Word::Get(const int &n)
 {
 
@@ -121,6 +137,38 @@ const int Word::Get()
 {
     return (int)data.to_ulong();
 }
+
+//___________________________________________
+
+Word Word::Shl()
+{
+	Word temp(data);
+	temp.carry = data[0];
+	for (int i = 1; i < WORD_SIZE; i++)
+	{
+		temp.data[i - 1] = data[i];
+	}
+
+
+	return temp;
+}
+
+//___________________________________________
+
+Word Word::Shr()
+{
+	Word temp(data);
+	temp.carry = data[15];
+	for (int i = 0; i < WORD_SIZE-1; i++)
+	{
+		temp.data[i + 1] = data[i];
+	}
+
+
+	return temp;
+}
+
+
 //___________________________________________
 
 Cpu::Cpu()
@@ -170,13 +218,13 @@ InstructionType Cpu::Parse()
 
     if(data[0]==0 || data[0]==8)
     {
-        std::cout <<"###AND###"<<std::endl;
+        std::cout <<"###AND"<<std::endl;
         ParseAddress(data,0,8);
         return AND;
     }
     else if(data[0]==1 || data[0]==9)
     {
-        std::cout <<"###ADD###"<<std::endl;
+        std::cout <<"###ADD"<<std::endl;
         ParseAddress(data,1,9);
 
 
@@ -184,31 +232,31 @@ InstructionType Cpu::Parse()
     }
     else if(data[0]==2 || data[0]==0xA)
     {
-        std::cout <<"###LDA###"<<std::endl;
+		std::cout << "("<<REG(AR).Get()<<")LDA"<<std::endl;
         ParseAddress(data,2,0xA);
         return LDA;
     }
     else if(data[0]==3 || data[0]==0xB)
     {
-       std::cout <<"###STA###"<<std::endl;
+		std::cout << "(" << REG(AR).Get() << ")STA" << std::endl;
         ParseAddress(data,3,0xB);
         return STA;
     }
     else if(data[0]==4 || data[0]==0xC)
     {
-        std::cout <<"###BUN###"<<std::endl;
+		std::cout << "(" << REG(AR).Get() << ")BUN" << std::endl;
         ParseAddress(data,4,0xC);
         return BUN;
     }
     else if(data[0]==5 || data[0]==0xD)
     {
-       std::cout <<"###BSA###"<<std::endl;
+		std::cout << "(" << REG(AR).Get() << ")BSA" << std::endl;
         ParseAddress(data,5,0xD);
         return BSA;
     }
     else if(data[0]==6 || data[0]==0xE)
     {
-        std::cout <<"###ISZ###"<<std::endl;
+		std::cout << "(" << REG(AR).Get() << ")ISZ" << std::endl;
         ParseAddress(data,6,0xE);
         return ISZ;
     }
@@ -216,14 +264,97 @@ InstructionType Cpu::Parse()
     {
         if(data[1]==8 && data[2]==0 && data[3]==0)
         {
+			std::cout << "(" << REG(AR).Get() << ")CLA" << std::endl;
             return CLA;
         }
+		else if (data[1] == 4 && data[2] == 0 && data[3] == 0)
+		{
+			std::cout << "(" << REG(AR).Get() << ")CLE" << std::endl;
+			return CLE;
+		}
+		else if (data[1] == 2 && data[2] == 0 && data[3] == 0)
+		{
+			std::cout << "(" << REG(AR).Get() << ")CMA" << std::endl;
+			return CMA;
+		}
+		else if (data[1] == 1 && data[2] == 0 && data[3] == 0)
+		{
+			std::cout << "(" << REG(AR).Get() << ")CME" << std::endl;
+			return CME;
+		}
+		else if (data[1] == 0 && data[2] == 8 && data[3] == 0)
+		{
+			std::cout << "(" << REG(AR).Get() << ")CIR" << std::endl;
+			return CIR;
+		}
+		else if (data[1] == 0 && data[2] == 4 && data[3] == 0)
+		{
+			std::cout << "(" << REG(AR).Get() << ")CIL" << std::endl;
+			return CIL;
+		}
+		else if (data[1] == 0 && data[2] == 2 && data[3] == 0)
+		{
+			std::cout << "(" << REG(AR).Get() << ")INC" << std::endl;
+			return INC;
+		}
+		else if (data[1] == 0 && data[2] == 1 && data[3] == 0)
+		{
+			std::cout << "(" << REG(AR).Get() << ")BUN" << std::endl;
+			return SPA;
+		}
+		else if (data[1] == 0 && data[2] == 0 && data[3] == 8)
+		{
+			std::cout << "(" << REG(AR).Get() << ")SNA" << std::endl;
+			return SNA;
+		}
+		else if (data[1] == 0 && data[2] == 0 && data[3] == 4)
+		{
+			std::cout << "(" << REG(AR).Get() << ")SZA" << std::endl;
+			return SZA;
+		}
+		else if (data[1] == 0 && data[2] == 0 && data[3] == 2)
+		{
+			std::cout << "(" << REG(AR).Get() << ")SZE" << std::endl;
+			return SZE;
+		}
         else if(data[1]==0 && data[2]==0 && data[3]==1)
         {
+			std::cout << "("<<REG(AR).Get()<<")HLT" << std::endl;
             return HLT;
         }
-    }
 
+		
+    }
+	else if (data[0] == 0xF)
+	{
+
+		if (data[1] == 8 && data[2] == 0 && data[3] == 0)
+		{
+			return INP;
+		}
+		else if (data[1] == 4 && data[2] == 0 && data[3] == 0)
+		{
+			return OUT;
+		}
+		else if (data[1] == 2 && data[2] == 0 && data[3] == 0)
+		{
+			return SKI;
+		}
+		else if (data[1] == 1 && data[2] == 0 && data[3] == 0)
+		{
+			return SKO;
+		}
+		else if (data[1] == 0 && data[2] == 8 && data[3] == 0)
+		{
+			return ION;
+		}
+		else if (data[1] == 0 && data[2] == 4 && data[3] == 0)
+		{
+			return IOF;
+		}
+	}
+
+	std::cout << "Error:Unknown instruction!" << std::endl;
     return HLT;
 }
 //___________________________________________
@@ -242,24 +373,21 @@ void Cpu::Execute(const std::vector<Word> &program)
    // PrintFlags();
     PrintRAM();
 
-    while(true)
+	while (REG(AR).Get() >= 0 && REG(AR).Get()<program.size())
     {
+		std::cout << "___________________________________________" << std::endl;
         REG(AR)=REG(PC);
 
 
         REG(PC)=Word(REG(PC).Get()+1);
 
-        if(REG(AR).Get()>=program.size())
-        {
-            return;
-        }
         REG(IR)=Mem[REG(AR).Get()];
         InstructionType type=Parse();
 
         switch(type)
         {
         case HLT:
-            return;
+            Hlt();
             break;
         case AND:
             And();
@@ -282,6 +410,57 @@ void Cpu::Execute(const std::vector<Word> &program)
          case ISZ:
             Isz();
             break;
+		 case CLA:
+			 Cla();
+			 break;
+		 case CLE:
+			 Cle();
+			 break;
+		 case CMA:
+			 Cma();
+			 break;
+		 case CME:
+			 Cme();
+			 break;
+		 case CIR:
+			 Cir();
+			 break;
+		 case CIL:
+			 Cil();
+			 break;
+		 case INC:
+			 Inc();
+			 break;
+		 case SPA:
+			 Spa();
+			 break;
+		 case SNA:
+			 Sna();
+			 break;
+		 case SZA:
+			 Sza();
+			 break;
+		 case SZE:
+			 Sze();
+			 break;
+		 case INP:
+			 Inp();
+			 break;
+		 case OUT:
+			 Out();
+			 break;
+		 case SKI:
+			 Ski();
+			 break;
+		 case SKO:
+			 Sko();
+			 break;
+		 case ION:
+			 Ion();
+			 break;
+		 case IOF:
+			 Iof();
+			 break;
         default:
            std::cout <<"Error:Unknown instruction!"<<std::endl;
             return;
@@ -317,6 +496,7 @@ void Cpu::Add()
     REG(DR)=Mem[REG(AR).Get()];
    // printf("Add dr=%d\n", REG(DR).Get());
     REG(AC)+=REG(DR);
+	
     flags[E]=REG(AC).carry;
    // printf("Add ACs=%s\n", REG(AC).data.to_string().c_str());
   //   printf("Add ac=%d\n", REG(AC).Get());
@@ -370,7 +550,7 @@ void Cpu::Isz()
     Mem[REG(AR).Get()]=REG(DR);
     if(REG(DR).Get()==0)
     {
-        printf("girdi\n");
+        //printf("girdi\n");
         REG(PC)=Word(REG(PC).Get()+1);
     }
     REG(SC)=Word(0);
@@ -378,9 +558,172 @@ void Cpu::Isz()
 
 //___________________________________________
 
+void Cpu::Cla()
+{
+	REG(AC) = Word(0);
+}
+
+//___________________________________________
+
+void Cpu::Cle()
+{
+	flags[E] = false;
+}
+
+//___________________________________________
+
+void Cpu::Cma()
+{
+	REG(AC) = ~REG(AC);
+}
+
+//___________________________________________
+
+void Cpu::Cme()
+{
+	flags[E] = !flags[E];
+}
+
+//___________________________________________
+
+void Cpu::Cir()
+{
+	
+	REG(AC)=REG(AC).Shr();
+	REG(AC).data[0] = flags[E];
+	flags[E] = REG(AC).carry;
+
+
+}
+
+//___________________________________________
+
+void Cpu::Cil()
+{
+	REG(AC) = REG(AC).Shl();
+	REG(AC).data[15] = flags[E];
+	flags[E] = REG(AC).carry;
+}
+
+//___________________________________________
+
+void Cpu::Inc()
+{
+	REG(AC) = Word(REG(AC).Get() + 1);
+}
+
+//___________________________________________
+
+void Cpu::Spa()
+{
+	if (REG(AC).data[15] == 0)
+	{
+		REG(PC) = Word(REG(PC).Get() + 1);
+	}
+}
+
+//___________________________________________
+
+void Cpu::Sna()
+{
+	if (REG(AC).data[15] == 1)
+	{
+		REG(PC) = Word(REG(PC).Get() + 1);
+	}
+}
+
+//___________________________________________
+
+void Cpu::Sza()
+{
+	if (REG(AC).Get() == 0)
+	{
+		REG(PC) = Word(REG(PC).Get() + 1);
+	}
+}
+
+//___________________________________________
+
+void Cpu::Sze()
+{
+	if (flags[E] == 0)
+	{
+		REG(PC) = Word(REG(PC).Get() + 1);
+	}
+}
+
+//___________________________________________
+
+void Cpu::Hlt()
+{
+	REG(AR) = Word(-1);
+}
+
+//___________________________________________
+
+void Cpu::Inp()
+{
+	int val;
+	std::cout << "IN=";
+	std::cin >> val;
+	REG(INPR) = Word(val);
+
+
+	REG(AC) = REG(INPR);
+	flags[FGI] = 0;
+	
+}
+
+//___________________________________________
+
+void Cpu::Out()
+{
+
+	REG(OUTR) = REG(AC);
+	std::cout <<"OUT="<< std::hex << REG(OUTR).Get()<<std::endl;
+	flags[FGO] = 0;
+}
+
+//___________________________________________
+
+void Cpu::Ski()
+{
+	if (flags[FGI] == 1)
+	{
+		REG(PC) = Word(REG(PC).Get() + 1);
+	}
+}
+
+//___________________________________________
+
+void Cpu::Sko()
+{
+	if (flags[FGO] == 1)
+	{
+		REG(PC) = Word(REG(PC).Get() + 1);
+	}
+}
+
+//___________________________________________
+
+void Cpu::Ion()
+{
+	flags[IEN] = true;
+}
+
+//___________________________________________
+
+void Cpu::Iof()
+{
+	flags[IEN] = false;
+}
+
+//___________________________________________
+
 void Cpu::PrintRAM()
 {
-    std::cout <<"-----------RAM-------------"<<std::endl;
+	//std::cout << "___________________________________________" << std::endl;
+	//std::cout << "___________________RAM____________________" << std::endl;
         for(int i = 0; i < Mem.size();i++)
         {
            std::cout <<i<<"|"<<Mem[i].data.to_string()<<"("<<std::hex<<Mem[i].Get()<<")"<<std::endl;
@@ -392,7 +735,8 @@ void Cpu::PrintRAM()
 
 void Cpu::PrintRegisters()
 {
-    std::cout <<"-----------Registers------------"<<std::endl;
+    //std::cout <<"___________________________________________"<<std::endl;
+	//std::cout <<"________________Registers__________________" << std::endl;
    std::cout <<std::hex<<
    "AC="<<REG(AC).Get()<<
    " | AR="<<REG(AR).Get()<<
@@ -410,7 +754,8 @@ void Cpu::PrintRegisters()
 
 void Cpu::PrintFlags()
 {
-    std::cout <<"-----------Flags------------"<<std::endl;
+	//std::cout << "___________________________________________" << std::endl;
+	//std::cout << "____________________Flags__________________" << std::endl;
     std::cout <<
     "I="<<flags[I]<<
     " | S="<<flags[S]<<

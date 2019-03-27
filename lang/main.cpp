@@ -6,6 +6,7 @@
 int main()
 {
     Cpu cpu;
+	/*
 //add example
     std::cout<<std::endl<<std::endl<<">>>>>>>ADD Example<<<<<<<<<<"<<std::endl<<std::endl;
     std::vector<Word> program={
@@ -13,12 +14,13 @@ int main()
         Word(0x1005),//1 ADD 4
         Word(HLT),//2
         Word(0x0004),//3 4
-        Word(0x0007),//4 7
-        Word(0x0008),//5 8
+        Word(0x9000),//4 7
+        Word(0xEE00),//5 8
         };
     cpu.Execute(program);
+	
     //cpu.PrintRegisters();
-
+	
 //and example
     std::cout<<std::endl<<std::endl<<">>>>>>>AND Example<<<<<<<<<<"<<std::endl<<std::endl;
     program={
@@ -95,8 +97,49 @@ int main()
         };
     cpu.Execute(program);
     cpu.PrintRAM();
+	*/
+	/*
+	//cla & cma exapmle
+	std::cout << std::endl << std::endl << ">>>>>>>CLA ve CMA Example<<<<<<<<<<" << std::endl << std::endl;
+	std::vector<Word> program = {
+		Word(0x2006),//0 LDA 7	
+		Word(CMA),//1 CMA
+		Word(0x3005),//2 STA 5
+		Word(CLA),//3 CLA
+		Word(HLT),//4
+		Word(0x0003),//5 3
+		Word(0x0009),//6 9
+	};
+	cpu.Execute(program);
+	cpu.PrintRAM();
+	*/
+	//cir & cil exapmle
+	std::cout << std::endl << std::endl << ">>>>>>> CIR & CIL Example<<<<<<<<<<" << std::endl << std::endl;
+	std::vector<Word> program = {
+		Word(0x2006),//0 LDA 6
+		Word(CIR),//1 CIR
+		Word(CIL),//2 CIL
+		Word(CIL),//3 CIL
+		Word(CIL),//4 CIL
+		Word(HLT),//5 HLT
+		Word(0x0003),//6 3
+		Word(0x0009),//7 9
+	};
+	cpu.Execute(program);
 
+	//inpr & outr exapmle
+	std::cout << std::endl << std::endl << ">>>>>>> INP & OUT Example<<<<<<<<<<" << std::endl << std::endl;
+	program = {
+		Word(INP),//0 INP
+		Word(0x3004),//1 STA 4
+		Word(OUT),//2 CIL
+		Word(HLT),//3 HLT
+		Word(0x0000),//4 0
+	};
+	cpu.Execute(program);
+	cpu.PrintRAM();
 	std::cout << "OK!" << std::endl;
+	std::getchar();
 	std::getchar();
     return 0;
 }

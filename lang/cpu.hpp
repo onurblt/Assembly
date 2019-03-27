@@ -52,7 +52,7 @@ enum InstructionType
     HLT=0x7001,
     INP=0XF800,
     OUT=0XF400,
-    SKT=0XF200,
+    SKI=0XF200,
     SKO=0XF100,
     ION=0XF080,
     IOF=0XF040
@@ -99,9 +99,12 @@ public:
     Word operator+=(const Word& other);
     Word operator&(const Word& other);
     Word operator&=(const Word& other);
+	Word operator~();
     const int Get(const int &n);
     const int Get();
     std::bitset<WORD_SIZE> data;
+	Word Shl();
+	Word Shr();
     bool carry;
 };
 
@@ -136,6 +139,25 @@ protected:
     void Bun();
     void Bsa();
     void Isz();
+	void Cla();
+	void Cle();
+	void Cma();
+	void Cme();
+	void Cir();
+	void Cil();
+	void Inc();
+	void Spa();
+	void Sna();
+	void Sza();
+	void Sze();
+	void Hlt();
+	void Inp();
+	void Out();
+	void Ski();
+	void Sko();
+	void Ion();
+	void Iof();
+
     Flag flags[FLAG_MAX];
 
     Word registers[REGISTER_MAX];
