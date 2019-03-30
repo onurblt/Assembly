@@ -1,6 +1,7 @@
 #include <vld.h>
 #include "cpu.hpp"
 
+#include "lexer.hpp"
 
 
 int main()
@@ -113,6 +114,7 @@ int main()
 	cpu.Execute(program);
 	cpu.PrintRAM();
 	*/
+/*
 	//cir & cil exapmle
 	std::cout << std::endl << std::endl << ">>>>>>> CIR & CIL Example<<<<<<<<<<" << std::endl << std::endl;
 	std::vector<Word> program = {
@@ -139,7 +141,19 @@ int main()
 	cpu.Execute(program);
 	cpu.PrintRAM();
 	std::cout << "OK!" << std::endl;
-	std::getchar();
+	std::getchar();*/
+
+Lexer lex;
+lex.lexString("ADD 1\n STA 3 I");
+
+Token token = lex.next();
+
+while (token.type != TK_END_OF_INPUT)
+{
+	std::cout << token.value <<"|"<< token.type << std::endl;
+	token = lex.next();
+}
+
 	std::getchar();
     return 0;
 }
