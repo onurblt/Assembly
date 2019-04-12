@@ -4,8 +4,10 @@
 // !!! GLUT IS OBSOLETE SOFTWARE. Using GLUT is not recommended unless you really miss the 90's. !!!
 // !!! If someone or something is teaching you GLUT in 2019, you are being abused. Please show some resistance. !!!
 
+#ifdef _DEBUG
 #include <vld.h>
-
+#endif
+#include <stdexcept>
 #include "imgui.h"
 #include "imgui_impl_freeglut.h"
 #include "imgui_impl_opengl2.h"
@@ -28,60 +30,113 @@ TextEditor textEditor;
 
 int currentLine = -1;
 bool stepByStep = false;
+bool shouldContinue = false;
 Cpu cpu;
 std::vector<int> registers;
+std::vector<int> flags;
 TextEditor::ErrorMarkers markers;
+TextEditor::Breakpoints breakPoints;
 
+void fileMenu()
+{
+ImGui::MenuItem("(dummy menu)", NULL, false, false);
+if (ImGui::MenuItem("Yeni")) {}
+if (ImGui::MenuItem("Ac", "Ctrl+O")) {}
+if (ImGui::BeginMenu("Son Acilanlar"))
+{
+	ImGui::MenuItem("fish_hat.c");
+	ImGui::MenuItem("fish_hat.inl");
+	ImGui::MenuItem("fish_hat.h");
+	ImGui::EndMenu();
+}
+if (ImGui::MenuItem("Kaydet", "Ctrl+S")) {}
+if (ImGui::MenuItem("Farkli kaydet..")) {}
+ImGui::Separator();
+if (ImGui::MenuItem("Secenekler"))
+if (ImGui::MenuItem("Quit", "Alt+F4")) {}
+
+}
 void my_display_code()
 {
     // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
    // if (show_demo_window)
-    //    ImGui::ShowDemoWindow(&show_demo_window);
+       //ImGui::ShowDemoWindow(&show_demo_window);
 
+	
+	   if (ImGui::BeginMainMenuBar())
+	   {
+		   if (ImGui::BeginMenu("Dosya"))
+		   {
+			   fileMenu();
+			   ImGui::EndMenu();
+		   }
+		   if (ImGui::BeginMenu("Duzenle"))
+		   {
+			   if (ImGui::MenuItem("Geri Al", "CTRL+Z")) {}
+			   if (ImGui::MenuItem("Tekrar yap", "CTRL+Y", false, false)) {}  // Disabled item
+			   ImGui::Separator();
+			   if (ImGui::MenuItem("Kes", "CTRL+X")) {}
+			   if (ImGui::MenuItem("Kopyala", "CTRL+C")) {}
+			   if (ImGui::MenuItem("Yapistir", "CTRL+V")) {}
+			   ImGui::EndMenu();
+		   }
+		   ImGui::EndMainMenuBar();
+	   }
     // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
-    {
-        static float f = 0.0f;
+	 static float f = 0.0f;
         static int counter = 0;
+		ImGui::SetNextWindowPos(ImVec2(0,0));
+		ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
 
-        ImGui::Begin("Editor");                          // Create a window called "Hello, world!" and append into it.
 
-        ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-		ImGui::Checkbox("Yazaclari Goster", &showRegistersWindow); ImGui::SameLine();
-		ImGui::Checkbox("Hafizayi Goster", &showRAMWindow); ImGui::SameLine();
-		ImGui::Checkbox("Bayraklari Goster", &showFlagsWindow); ImGui::SameLine();
+		ImGui::Begin("Editor",0, ImGuiWindowFlags_NoTitleBar );
+
+      
 
 		if (ImGui::Button("Baslat"))
 		{
-			
-			//if (currentLine <0)
-			//{
-			
 			currentLine = 0;
 			stepByStep = false;
 			registers.clear();
 			markers.clear();
-			try
-			{
+			flags.clear();
+			breakPoints.clear();
 				std::string script = textEditor.GetText();
 				cpu.setRAM(script);
-			}
-			catch (Error err)
-			{
-				std::cout << err.what() << std::endl;
-				markers[err.getLine()] = err.getMesssage();
+			
+				if (cpu.error.getType()!=ERR_NONE)
+				{
+					std::cout << cpu.error.getMessage() << std::endl;
+					markers[cpu.error.getLine()] = cpu.error.getMessage();
 				
-			}
+				}
 
-			//}
+			shouldContinue = true;
 		}
 		ImGui::SameLine();
-		if (ImGui::Button("Adim Adim Ilerle"))
+		if (ImGui::Button("Ilerle"))
 		{
 			if (currentLine < 0)
 			{
 				currentLine = 0;
 				stepByStep = true;
+				registers.clear();
+				markers.clear();
+				flags.clear();
+				breakPoints.clear();
+				std::string script = textEditor.GetText();
+				cpu.setRAM(script);
+
+				if (cpu.error.getType() != ERR_NONE)
+				{
+					std::cout << cpu.error.getMessage() << std::endl;
+					markers[cpu.error.getLine()] = cpu.error.getMessage();
+
+				}
+
+				shouldContinue = true;
 			}
+			shouldContinue = true;
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Durdur"))
@@ -90,20 +145,26 @@ void my_display_code()
 			{
 				currentLine = -1;
 				stepByStep = false;
+				shouldContinue = false;
 			}
 		}
+		//ImGui::Checkbox("Demo Window", &show_demo_window); ImGui::SameLine();      // Edit bools storing our window open/close state
+		ImGui::Checkbox("Yazaclari Goster", &showRegistersWindow); ImGui::SameLine();
+		ImGui::Checkbox("Hafizayi Goster", &showRAMWindow); ImGui::SameLine();
+		ImGui::Checkbox("Bayraklari Goster", &showFlagsWindow); 
 
 		textEditor.SetErrorMarkers(markers);
 		textEditor.Render("Adsiz");
 
 	if (currentLine >= 0)
 	{
-		try
+		if (shouldContinue)
 		{
-			
-			bool running = cpu.step();
-		
-			if (!running)
+			currentLine = cpu.step();
+
+			breakPoints.insert(currentLine);
+			textEditor.SetBreakpoints(breakPoints);
+			if (currentLine<0)
 			{
 				currentLine = -1;
 			}
@@ -118,19 +179,35 @@ void my_display_code()
 				registers.push_back(cpu.REG[INPR].Get());
 				registers.push_back(cpu.REG[INPR].Get());
 				registers.push_back(cpu.REG[SC].Get());
+
+				flags.push_back(cpu.flags[FLAG_I]);
+				flags.push_back(cpu.flags[FLAG_S]);
+				flags.push_back(cpu.flags[FLAG_E]);
+				flags.push_back(cpu.flags[FLAG_R]);
+				flags.push_back(cpu.flags[FLAG_IEN]);
+				flags.push_back(cpu.flags[FLAG_FGI]);
+				flags.push_back(cpu.flags[FLAG_FGO]);
+			}
+		
+			if (cpu.error.getType()!=ERR_NONE)
+			{
+				std::cout << cpu.error.getMessage() << std::endl;
+				markers[cpu.error.getLine()] = cpu.error.getMessage();
+			}
+
+			if (stepByStep)
+			{
+				shouldContinue = false;
 			}
 		}
-		catch (Error err)
-		{
-			std::cout << err.what() << std::endl;
-			markers[err.getLine()] = err.getMesssage();
-		}
+		
+		
 	}
     // 3. Show another simple window.
 	if (showRegistersWindow)
     {
-		ImGui::Begin("Yazaclar", &showRegistersWindow);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-	
+		ImGui::Begin("Yazaclar", &showRegistersWindow, ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysUseWindowPadding);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+		//ImGui:FocusWindow(window);
 		ImGui::Columns(REGISTER_MAX+1, "registers"); // 4-ways, with border
 		ImGui::Separator();
 		ImGui::Text("Islem No"); ImGui::NextColumn();
@@ -146,18 +223,18 @@ void my_display_code()
 		ImGui::Separator();
 		
 		static int selected = -1;
-		for (int i = 0; i < registers.size()/9; i++)
+		for (int i = 0; i < registers.size()/REGISTER_MAX; i++)
 		{
 			char label[32];
-			sprintf(label, "%04d", i+1);
+			sprintf(label, "%04x", i+1);
 			if (ImGui::Selectable(label, selected == i, ImGuiSelectableFlags_SpanAllColumns))
 				selected = i;
 			bool hovered = ImGui::IsItemHovered();
 			ImGui::NextColumn();
 			//ImGui::Text(names[i]); ImGui::NextColumn();
-			for (int j = 0; j < 9; j++)
+			for (int j = 0; j < REGISTER_MAX; j++)
 			{
-				ImGui::Text("%x", registers[i*9+j]); ImGui::NextColumn();
+				ImGui::Text("%x", registers[i*REGISTER_MAX + j]); ImGui::NextColumn();
 			}
 			
 			//ImGui::Text("%d", hovered); ImGui::NextColumn();
@@ -169,7 +246,7 @@ void my_display_code()
 
 	if (showFlagsWindow)
 	{
-		ImGui::Begin("Bayraklar", &showRegistersWindow);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+		ImGui::Begin("Bayraklar", &showFlagsWindow, ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysUseWindowPadding);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
 
 		ImGui::Columns(FLAG_MAX+1, "flags"); // 4-ways, with border
 		ImGui::Separator();
@@ -184,10 +261,10 @@ void my_display_code()
 		ImGui::Separator();
 
 		static int selected = -1;
-		for (int i = 0; i < 10; i++)
+		for (int i = 0; i < flags.size()/FLAG_MAX; i++)
 		{
 			char label[32];
-			sprintf(label, "%04d", i + 1);
+			sprintf(label, "%04x", i + 1);
 			if (ImGui::Selectable(label, selected == i, ImGuiSelectableFlags_SpanAllColumns))
 				selected = i;
 			bool hovered = ImGui::IsItemHovered();
@@ -195,7 +272,7 @@ void my_display_code()
 			//ImGui::Text(names[i]); ImGui::NextColumn();
 			for (int j = 0; j < FLAG_MAX ; j++)
 			{
-				ImGui::Text("%d", 0); ImGui::NextColumn();
+				ImGui::Text("%x", flags[i*FLAG_MAX+j]); ImGui::NextColumn();
 			}
 
 			//ImGui::Text("%d", hovered); ImGui::NextColumn();
@@ -204,9 +281,34 @@ void my_display_code()
 		ImGui::Separator();
 		ImGui::End();
 	}
+	if (showRAMWindow)
+	{
+		ImGui::Begin("RAM", &showRAMWindow, ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_AlwaysUseWindowPadding);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+
+		ImGui::Columns(2, "words"); 
+		ImGui::SetColumnWidth(0,100);
+		static int selected = -1;
+		for (int i = 0; i < cpu.Mem.size(); i++)
+		{
+			char label[16];
+			sprintf(label, "%04x", i);
+
+			
+			if (ImGui::Selectable(label, selected == i, ImGuiSelectableFlags_SpanAllColumns,ImVec2(40,20)))
+				selected = i;
+			bool hovered = ImGui::IsItemHovered();
+
+			ImGui::NextColumn();
+			ImGui::Text("%x", cpu.Mem[i].Get()); ImGui::NextColumn();
+
+		}
+		ImGui::Separator();
+		ImGui::End();
+	}
+
 
 	ImGui::End();
-	}
+	
 
 }
 
@@ -231,6 +333,7 @@ void glut_display_func()
     glutPostRedisplay();
 }
 
+
 // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
 // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
 // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
@@ -242,17 +345,18 @@ int main(int argc, char** argv)
     glutInit(&argc, argv);
     glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS);
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_MULTISAMPLE);
-    glutInitWindowSize(1280, 720);
-    glutCreateWindow("Dear ImGui FreeGLUT+OpenGL2 Example");
+	glutInitWindowSize(1024, 768);
+    glutCreateWindow("Editor");
 
     // Setup GLUT display function
     // We will also call ImGui_ImplFreeGLUT_InstallFuncs() to get all the other functions installed for us,
     // otherwise it is possible to install our own functions and call the imgui_impl_freeglut.h functions ourselves.
     glutDisplayFunc(glut_display_func);
-
+	//glutReshapeFunc(glut_respahe_func);
     // Setup Dear ImGui context
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
+	
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
 
     // Setup Dear ImGui style
@@ -279,10 +383,16 @@ int main(int argc, char** argv)
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != NULL);
 
+	//ImGui::PopFont();
+	//ImFont* font = io.Fonts->AddFontDefault();
+	//io.FontDefault->FontSize = 16;
+	io.FontGlobalScale = 1.5f;
+	//ImGui::PushFont(font);
+
 
 	textEditor.SetPalette(TextEditor::GetLightPalette());
 	textEditor.SetLanguageDefinition(TextEditor::LanguageDefinition::Assembly());
-
+	
     glutMainLoop();
 
     // Cleanup

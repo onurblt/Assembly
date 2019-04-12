@@ -4,7 +4,6 @@
     <ClCompile Include="cpu.cpp" />
     <ClCompile Include="error.cpp" />
     <ClCompile Include="lexer.cpp" />
-    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cpu.hpp" />

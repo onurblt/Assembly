@@ -590,6 +590,7 @@ void TextEditor::HandleMouseInputs()
 			/*
 			Left mouse button click
 			*/
+			
 			else if (click)
 			{
 				mState.mCursorPosition = mInteractiveStart = mInteractiveEnd = SanitizeCoordinates(ScreenPosToCoordinates(ImGui::GetMousePos()));
@@ -602,7 +603,7 @@ void TextEditor::HandleMouseInputs()
 				mLastClick = (float)ImGui::GetTime();
 
 
-
+				/*
 				Coordinates coord = GetCursorPosition();
 				if (coord.mLine + 1 < mLines.size())
 				{
@@ -620,6 +621,7 @@ void TextEditor::HandleMouseInputs()
 					
 					}
 				}
+				*/
 			}
 			// Mouse left button dragging (=> update selection)
 			else if (ImGui::IsMouseDragging(0) && ImGui::IsMouseDown(0))
@@ -718,8 +720,8 @@ void TextEditor::Render()
 
 			// Draw breakpoints
 			auto start = ImVec2(lineStartScreenPos.x + scrollX, lineStartScreenPos.y);
-
-			if (mBreakpoints.count(lineNo + 1) != 0)
+			
+			if (mBreakpoints.count(lineNo) != 0)//+1
 			{
 				auto end = ImVec2(lineStartScreenPos.x + contentSize.x + 2.0f * scrollX, lineStartScreenPos.y + mCharAdvance.y);
 				drawList->AddCircleFilled(ImVec2(lineStartScreenPos.x + mCharAdvance.x*2.0, lineStartScreenPos.y + mCharAdvance.y*0.5),
@@ -727,7 +729,7 @@ void TextEditor::Render()
 					mPalette[(int)PaletteIndex::Breakpoint]);
 				//drawList->AddRectFilled(start, end, mPalette[(int)PaletteIndex::Breakpoint]);
 			}
-
+			
 			// Draw error markers
 			auto errorIt = mErrorMarkers.find(lineNo);// +1);
 			if (errorIt != mErrorMarkers.end())
@@ -739,7 +741,7 @@ void TextEditor::Render()
 				{
 					ImGui::BeginTooltip();
 					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.2f, 0.2f, 1.0f));
-					ImGui::Text("Error at line %d:", errorIt->first);
+					ImGui::Text("%d nolu satirda hata:", errorIt->first);
 					ImGui::PopStyleColor();
 					ImGui::Separator();
 					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.2f, 1.0f));
@@ -1672,14 +1674,14 @@ const TextEditor::Palette & TextEditor::GetLightPalette()
 {
 	const static Palette p = { {
 		0xff7f7f7f,	// None
-		0xffff0c06,	// Keyword	
+		0xff606010,	// Keyword	
 		0xff008000,	// Number
 		0xff2020a0,	// String
 		0xff304070, // Char literal
 		0xff000000, // Punctuation
 		0xff406060,	// Preprocessor
 		0xff404040, // Identifier
-		0xff606010, // Known identifier
+		0xffff0c06, // Known identifier
 		0xffc040a0, // Preproc identifier
 		0xff205020, // Comment (single line)
 		0xff405020, // Comment (multi line)
@@ -2774,14 +2776,15 @@ const TextEditor::LanguageDefinition& TextEditor::LanguageDefinition::Assembly()
 	if (!inited)
 	{
 		static const char* const keywords[] = {
-			"AND","ADD", "LDA", "STA", "BUN", "BSA", "ISZ", "CLA", "CLE", "CMA", "CME", "CIR", "CIL", "INC", "SPA", "SNA", "SZA", "SZE", "HLT", "INP", "OUT", "SKI", "SKO", "ION", "IOF"
-
+			"ORG", "I"
 		};
 		for (auto& k : keywords)
 			langDef.mKeywords.insert(k);
 		
 		static const char* const identifiers[] = {
-			"ORG", "I"
+			
+			"AND", "ADD", "LDA", "STA", "BUN", "BSA", "ISZ", "CLA", "CLE", "CMA", "CME", "CIR", "CIL", "INC", "SPA", "SNA", "SZA", "SZE", "HLT", "INP", "OUT", "SKI", "SKO", "ION", "IOF"
+
 		};
 		for (auto& k : identifiers)
 		{
