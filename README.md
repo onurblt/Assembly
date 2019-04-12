@@ -11,6 +11,7 @@ Assembly language IDE based on Logic and Computer Design Fundamentals book
 * Hafızanın durumunu görme
 * Hangi satırın çalıştmış olduğunun işaretlenmesi
 * Başlatla durmadan çalışma ve ya İlerle ile adım adım çalıştırma
+* Sembolik adresleme
 
 # Ekran Görüntüleri
 
